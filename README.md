@@ -214,5 +214,5 @@ If you encounter any issues, please:
 
 <div align="center">
   <p>Star this repository if you found it helpful!</p>
-  <p>Made with love by Gurpreet Kukkar & Rajat Savdekar</p>
+  <p>Made by Gurpreet Kukkar & Rajat Savdekar</p>
 </div>
