@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Modal Search Engine</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f0f0; margin: 0; padding: 20px; }
+        .search-container { display: flex; width: 100%; max-width: 700px; margin-bottom: 20px; }
+        #queryInput { flex-grow: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; }
+        #kSelect { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-left: none; background-color: white; }
+        #searchButton { padding: 10px 20px; font-size: 16px; border: 1px solid #007bff; border-left: none; background-color: #007bff; color: white; cursor: pointer; border-radius: 0 5px 5px 0; }
+        #results { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        .image-card { background-color: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); overflow: hidden; max-width: 300px; text-align: center; }
+        .image-card img { width: 100%; height: auto; display: block; }
+        .image-card p { padding: 10px; margin: 0; font-size: 14px; color: #555; }
+        .image-card a { text-decoration: none; color: inherit; }
+    </style>
+</head>
+<body>
+    <h1>Multi-Modal Search Engine</h1>
+    <div class="search-container">
+        <input type="text" id="queryInput" placeholder="e.g., A dog playing fetch in a field">
+        <select id="kSelect">
+            <option value="3">3 results</option>
+            <option value="5" selected>5 results</option>
+            <option value="10">10 results</option>
+            <option value="15">15 results</option>
+            <option value="20">20 results</option>
+        </select>
+        <button id="searchButton">Search</button>
+    </div>
+    <div id="results"></div>
+
+    <script>
+        const queryInput = document.getElementById('queryInput');
+        const kSelect = document.getElementById('kSelect');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('results');
+
+        searchButton.addEventListener('click', performSearch);
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        async function performSearch() {
+            const query = queryInput.value;
+            const k = kSelect.value;
+            
+            if (!query) {
+                alert("Please enter a search query.");
+                return;
+            }
+
+            resultsContainer.innerHTML = '<h2>Searching...</h2>';
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/search?query=${encodeURIComponent(query)}&k=${k}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+
+                resultsContainer.innerHTML = ''; // Clear "Searching..." message
+
+                // Check for API error response
+                if (data.error) {
+                    resultsContainer.innerHTML = `<p style="color: red;">❌ API Error: ${data.error}</p>`;
+                    return;
+                }
+
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(result => {
+                        const card = document.createElement('div');
+                        card.className = 'image-card';
+                        
+                        const img = document.createElement('img');
+                        const relativePath = result.path.replace(/\\/g, '/'); // fix windows paths
+                        img.src = `http://127.0.0.1:8000/${relativePath}`;
+                        img.alt = "Search Result";
+                        
+                        img.onerror = function() {
+                            this.parentNode.innerHTML = '<p style="color: red;">Image not found</p>';
+                        };
+                        
+                        // No captions - just the image
+                        card.appendChild(img);
+                        resultsContainer.appendChild(card);
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<p>No results found.</p>';
+                }
+
+            } catch (error) {
+                console.error("Error fetching search results:", error);
+                
+                // More specific error messages
+                if (error.message.includes('Failed to fetch')) {
+                    resultsContainer.innerHTML = '<p style="color: red;">❌ Cannot connect to API server. Make sure it\'s running on port 8000.</p>';
+                } else if (error.message.includes('HTTP 500')) {
+                    resultsContainer.innerHTML = '<p style="color: red;">❌ Server error. Check if the database is properly set up.</p>';
+                } else {
+                    resultsContainer.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
